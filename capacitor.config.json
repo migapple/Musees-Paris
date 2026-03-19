@@ -1,0 +1,25 @@
+{
+  "appId": "com.michel.garlandat.museesparis",
+  "appName": "Musées Paris",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "preferredContentMode": "mobile",
+    "backgroundColor": "#0c0b09"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0,
+      "backgroundColor": "#0c0b09",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#0c0b09",
+      "overlaysWebView": true
+    }
+  }
+}

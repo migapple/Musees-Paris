@@ -1,0 +1,10 @@
+{
+  "appId": "com.michel.garlandat.musees",
+  "appName": "musees-paris",
+  "webDir": "dist",
+  "plugins": {
+    "SplashScreen": {
+      "launchAutoHide": false
+    }
+  }
+}
