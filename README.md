@@ -1,3 +1,7 @@
+# Versuin 1.1
+- Ajout nos autres App
+- supression double clic
+
 # Musées de Paris
 
 Application iOS guide des musées parisiens, développée avec Capacitor 6 (HTML/CSS/JS).
