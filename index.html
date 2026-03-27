@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="referrer" content="no-referrer">
+  <title>Musées de Paris</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=Jost:wght@400;500;600&display=swap');
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --bg:#0d0b08;--bg2:#161310;--card:#1c1915;--card2:#221f1b;
+      --border:#2e2a24;--border2:#3d3830;
+      --gold:#c9a870;--golddim:rgba(201,168,112,.13);
+      --text:#f0ece3;--text2:#b0a890;--text3:#6a6050;--red:#cc6060;
+      --safe-top:env(safe-area-inset-top,44px);--safe-bottom:env(safe-area-inset-bottom,34px);
+      --hh:calc(56px + var(--safe-top));--nh:calc(62px + var(--safe-bottom));
+      --r:16px;--rs:10px;
+      --FD:'Cormorant Garamond',Georgia,serif;--FB:'Jost',system-ui,sans-serif;
+    }
+    body.light{--bg:#f4f0e8;--bg2:#ece7dd;--card:#fff;--card2:#f8f4ee;--border:#ddd6c8;--border2:#ccc4b4;--text:#18140c;--text2:#524840;--text3:#998c7c}
+    html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--FB);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;user-select:none}
+
+    #hdr{position:fixed;top:0;left:0;right:0;z-index:100;height:var(--hh);padding-top:var(--safe-top);background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding-left:20px;padding-right:16px}
+    .hl{display:flex;align-items:center;gap:10px}
+    .hlogo{color:var(--gold);font-size:18px}
+    #htitle{font-family:var(--FD);font-size:20px;font-weight:600;letter-spacing:.02em}
+    .hr{display:flex;gap:8px}
+    .hbtn{background:var(--card);border:1px solid var(--border);color:var(--text2);border-radius:8px;height:36px;min-width:36px;padding:0 10px;display:flex;align-items:center;justify-content:center;font-family:var(--FB);font-size:12px;font-weight:600;letter-spacing:.08em;cursor:pointer}
+    .hbtn:active{opacity:.6;transform:scale(.94)}
+
+    #main{position:fixed;top:var(--hh);bottom:var(--nh);left:0;right:0;overflow:hidden}
+    .view{position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;opacity:0;pointer-events:none;transform:translateY(6px);transition:opacity .26s,transform .26s}
+    .view.on{opacity:1;pointer-events:auto;transform:none}
+
+    .swrap{padding:14px 16px 0;position:sticky;top:0;z-index:5;background:var(--bg)}
+    .sin{position:relative}
+    .sico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:16px;pointer-events:none}
+    #sinput{width:100%;height:44px;background:var(--card);border:1px solid var(--border);border-radius:var(--rs);padding:0 14px 0 38px;color:var(--text);font-family:var(--FB);font-size:16px;outline:none;transition:border-color .2s;-webkit-appearance:none}
+    #sinput::placeholder{color:var(--text3)}
+    #sinput:focus{border-color:var(--gold)}
+    .chips{display:flex;gap:7px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
+    .chips::-webkit-scrollbar{display:none}
+    .chip{flex-shrink:0;background:var(--card);border:1px solid var(--border);color:var(--text3);border-radius:20px;padding:5px 13px;font-size:12px;font-weight:500;cursor:pointer;transition:all .18s;white-space:nowrap;font-family:var(--FB)}
+    .chip.on{background:var(--golddim);border-color:var(--gold);color:var(--gold)}
+
+    #mlist,#flist{padding:10px 16px 16px;display:flex;flex-direction:column;gap:11px}
+    .cnt{font-size:11px;color:var(--text3);font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:0 2px 2px}
+    .mc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:transform .18s;animation:fu .3s ease both}
+    @keyframes fu{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+    .mc:nth-child(2){animation-delay:.04s}.mc:nth-child(3){animation-delay:.08s}.mc:nth-child(4){animation-delay:.12s}.mc:nth-child(n+5){animation-delay:.16s}
+    .mc:active{transform:scale(.975)}
+
+    /* Image placeholder with gradient */
+    .mthumb{width:100%;height:160px;display:block;background:var(--border);position:relative;overflow:hidden}
+    .mthumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .4s}
+
+    .mcb{padding:13px 15px}
+    .mct{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+    .mcn{font-family:var(--FD);font-size:18px;font-weight:600;color:var(--text);line-height:1.2;flex:1}
+    .fbtn{background:none;border:none;font-size:21px;cursor:pointer;color:var(--text3);padding:1px 3px;flex-shrink:0;transition:color .18s,transform .14s;line-height:1}
+    .fbtn.on{color:var(--red)}.fbtn:active{transform:scale(1.35)}
+    .mcaddr{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text3);margin-top:4px}
+    .mctags{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px}
+    .tag{background:var(--golddim);border:1px solid rgba(201,168,112,.18);color:var(--gold);border-radius:4px;padding:2px 8px;font-size:11px;font-weight:500}
+
+    .empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:70px 32px;gap:12px;text-align:center}
+    .eico{font-size:52px;opacity:.22}
+    .etxt{color:var(--text3);font-size:15px;line-height:1.65;white-space:pre-line}
+
+    #vmap{overflow:hidden}
+    #map{width:100%;height:100%}
+    .leaflet-tile-pane{filter:brightness(.68) saturate(.5)}
+    body.light .leaflet-tile-pane{filter:none}
+    .leaflet-popup-content-wrapper{background:var(--card)!important;color:var(--text)!important;border:1px solid var(--border)!important;border-radius:12px!important;box-shadow:0 8px 32px rgba(0,0,0,.6)!important}
+    .leaflet-popup-tip{background:var(--card)!important}
+    .leaflet-popup-close-button{color:var(--text3)!important}
+    .leaflet-control-zoom a{background:var(--card)!important;color:var(--text)!important;border-color:var(--border)!important}
+    .pname{font-family:var(--FD);font-size:15px;font-weight:600}
+    .ptype{font-size:11px;color:var(--gold);margin-top:3px}
+    .pbtn{display:block;margin-top:8px;width:100%;text-align:center;background:var(--golddim);border:1px solid rgba(201,168,112,.3);color:var(--gold);border-radius:6px;padding:5px 10px;font-size:12px;font-family:var(--FB);font-weight:500;cursor:pointer}
+
+    .dback{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--bg);border-bottom:1px solid var(--border);cursor:pointer}
+    .dbacklbl{font-size:15px;color:var(--gold);font-weight:500}
+
+    /* Detail hero image */
+    .dhero-wrap{width:100%;height:240px;background:var(--border);position:relative;overflow:hidden}
+    .dhero-wrap img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .4s}
+
+    .dbody{padding:20px 20px 40px}
+    .dr1{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
+    .dname{font-family:var(--FD);font-size:26px;font-weight:600;line-height:1.2;flex:1}
+    .dfav{background:var(--card);border:1px solid var(--border);border-radius:10px;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-size:22px;cursor:pointer;color:var(--text3);flex-shrink:0}
+    .dfav.on{color:var(--red);border-color:rgba(204,96,96,.3)}.dfav:active{transform:scale(.88)}
+    .dtags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+    .ddesc{font-size:15px;line-height:1.68;color:var(--text2);margin-bottom:20px}
+    .dacts{display:flex;gap:10px;margin-bottom:18px}
+    .abtn{flex:1;height:48px;border:none;border-radius:var(--rs);font-family:var(--FB);font-size:14px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:opacity .18s}
+    .abtn:active{opacity:.75;transform:scale(.97)}
+    .agold{background:var(--gold);color:#0d0b08}
+    .aplain{background:var(--card);border:1px solid var(--border);color:var(--text)}
+    .iblock{background:var(--card);border:1px solid var(--border);border-radius:var(--rs);overflow:hidden;margin-bottom:12px}
+    .irow{display:flex;align-items:flex-start;gap:12px;padding:13px 15px;border-bottom:1px solid var(--border)}
+    .irow:last-child{border-bottom:none}
+    .iico{font-size:15px;width:20px;flex-shrink:0;opacity:.55;margin-top:2px}
+    .ilbl{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+    .ival{font-size:14px;color:var(--text);line-height:1.5}
+    .igps{font-size:12px;color:var(--text3);margin-top:2px}
+    .atttl{font-family:var(--FD);font-size:20px;font-weight:600;margin:22px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+    .ascroll{display:flex;gap:11px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+    .ascroll::-webkit-scrollbar{display:none}
+    .ac{flex-shrink:0;width:138px;background:var(--card);border:1px solid var(--border);border-radius:var(--rs);overflow:hidden}
+
+    /* Artwork image placeholder */
+    .acthumb{width:138px;height:138px;background:var(--border);position:relative;overflow:hidden}
+    .acthumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:opacity .4s}
+
+    .acinfo{padding:8px 9px 10px}
+    .acname{font-family:var(--FD);font-size:13px;font-weight:600;line-height:1.3}
+    .acar{font-size:11px;color:var(--text3);margin-top:2px}
+    .acyr{font-size:10px;color:var(--gold);margin-top:2px;opacity:.85}
+
+    #nav{position:fixed;bottom:0;left:0;right:0;z-index:100;height:var(--nh);padding-bottom:var(--safe-bottom);background:var(--bg2);border-top:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-around}
+    .nb{flex:1;height:62px;background:none;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;color:var(--text3);transition:color .18s;position:relative}
+    .nb.on{color:var(--gold)}.nb:active{opacity:.65}
+    .nblbl{font-size:10px;font-weight:500;letter-spacing:.05em;text-transform:uppercase}
+    .ndot{position:absolute;top:9px;right:calc(50% - 15px);width:6px;height:6px;background:var(--gold);border-radius:50%;display:none}
+    .ndot.on{display:block}
+
+    .sov{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.55);display:none;align-items:flex-end}
+    .sov.on{display:flex}
+    .sht{width:100%;background:var(--bg2);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding-bottom:var(--safe-bottom);transform:translateY(100%);transition:transform .32s cubic-bezier(.4,0,.2,1)}
+    .sov.on .sht{transform:none}
+    .shd{display:flex;align-items:center;justify-content:space-between;padding:20px 20px 14px;border-bottom:1px solid var(--border)}
+    .sttl{font-family:var(--FD);font-size:20px;font-weight:600}
+    .sclose{background:var(--card);border:1px solid var(--border);color:var(--text2);width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer}
+    .srow{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border)}
+    .srow:last-child{border-bottom:none}
+    .slbl{font-size:15px}
+    .tog{position:relative;width:48px;height:28px;flex-shrink:0}
+    .tog input{opacity:0;width:0;height:0}
+    .togs{position:absolute;inset:0;background:var(--border2);border-radius:14px;cursor:pointer;transition:background .22s}
+    .togs::before{content:'';position:absolute;width:20px;height:20px;left:4px;top:4px;background:#fff;border-radius:50%;transition:transform .22s;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+    .tog input:checked+.togs{background:var(--gold)}
+    .tog input:checked+.togs::before{transform:translateX(20px)}
+
+    #toast{position:fixed;bottom:calc(var(--nh) + 14px);left:50%;transform:translateX(-50%) translateY(18px);background:var(--card2);border:1px solid var(--border2);color:var(--text);padding:9px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:400;opacity:0;transition:opacity .26s,transform .26s;pointer-events:none;white-space:nowrap;box-shadow:0 8px 32px rgba(0,0,0,.6)}
+    #toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+    
+
+    .other-apps-title { font-size: 0.82rem; font-weight: 700; color: #6d28d9; margin-bottom: 12px; }
+    .other-app-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: white; border-radius: 10px; text-decoration: none; border: 1px solid #e5e7eb; margin-bottom: 8px; }
+    .other-app-row:last-child { margin-bottom: 0; }
+    .other-app-emoji { font-size: 1.5rem; width: 32px; text-align: center; flex-shrink: 0; }
+    .other-app-info { flex: 1; }
+    .other-app-name { font-weight: 600; color: #1f2937; font-size: 0.9rem; }
+    .other-app-sub { font-size: 0.75rem; color: #6b7280; }
+    .other-app-arrow { color: #8b5cf6; font-size: 1.1rem; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="hl">
+    <span class="hlogo">▲</span>
+    <span id="htitle">Musées de Paris</span>
+  </div>
+  <div class="hr">
+    <button id="blang" class="hbtn">FR</button>
+    <button id="bset" class="hbtn">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="8" cy="8" r="2.2"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.1 3.1l1.1 1.1M11.8 11.8l1.1 1.1M12.9 3.1l-1.1 1.1M4.2 11.8l-1.1 1.1"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="main">
+  <div id="vlist" class="view on">
+    <div class="swrap">
+      <div class="sin">
+        <span class="sico">⌕</span>
+        <input id="sinput" type="search" placeholder="Rechercher…" autocomplete="off" autocorrect="off" spellcheck="false">
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+    <div id="mlist"></div>
+  </div>
+  <div id="vmap" class="view"><div id="map"></div></div>
+  <div id="vfavorites" class="view"><div id="flist"></div></div>
+  <div id="vdetail" class="view"><div id="dinn"></div></div>
+</main>
+
+<nav id="nav">
+  <button class="nb on" data-v="list">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="12" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="12" width="7" height="7" rx="1.5"/><rect x="12" y="12" width="7" height="7" rx="1.5"/></svg>
+    <span class="nblbl" id="nl0">Liste</span>
+  </button>
+  <button class="nb" data-v="map">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="1,5 8,2 14,5 21,2 21,17 14,20 8,17 1,20"/><line x1="8" y1="2" x2="8" y2="17"/><line x1="14" y1="5" x2="14" y2="20"/></svg>
+    <span class="nblbl" id="nl1">Carte</span>
+  </button>
+  <button class="nb" data-v="favorites">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11 19.5L2.5 11C1.1 9.6 1.1 7.4 2.5 6 3.9 4.6 6.1 4.6 7.5 6L11 9.5 14.5 6c1.4-1.4 3.6-1.4 5 0 1.4 1.4 1.4 3.6 0 5z"/></svg>
+    <span class="nblbl" id="nl2">Favoris</span>
+    <span class="ndot" id="ndot"></span>
+  </button>
+</nav>
+
+<div class="sov" id="sov">
+  <div class="sht">
+    <div class="shd"><span class="sttl" id="sttl">Paramètres</span><button class="sclose" id="sclose">✕</button></div>
+    <div class="srow"><span class="slbl" id="sdark">Mode sombre</span><label class="tog"><input type="checkbox" id="tdark" checked><span class="togs"></span></label></div>
+<!-- NOS AUTRES APPS -->
+    <div class="other-apps-section">
+      <div class="other-apps-title">📱 Nos autres apps</div>
+      <a href="https://apps.apple.com/fr/app/id6760126279" target="_blank" class="other-app-row">
+        <span class="other-app-emoji">🍷</span>
+        <div class="other-app-info"><div class="other-app-name">Cave Manager</div><div class="other-app-sub">Gérez votre cave à vin</div></div>
+        <span class="other-app-arrow">›</span>
+      </a>
+      <a href="https://apps.apple.com/fr/app/id6759870654" target="_blank" class="other-app-row">
+        <span class="other-app-emoji">💊</span>
+        <div class="other-app-info"><div class="other-app-name">MediManager</div><div class="other-app-sub">Suivi de vos médicaments</div></div>
+        <span class="other-app-arrow">›</span>
+      </a>
+      <a href="https://apps.apple.com/fr/app/id6760751055" target="_blank" class="other-app-row">
+        <span class="other-app-emoji">🪦</span>
+        <div class="other-app-info"><div class="other-app-name">Cimetières Paris</div><div class="other-app-sub">Père-Lachaise &amp; Montparnasse</div></div>
+        <span class="other-app-arrow">›</span>
+      </a>
+      <a href="https://apps.apple.com/fr/app/id6759219383" target="_blank" class="other-app-row">
+        <span class="other-app-emoji">🍽</span>
+        <div class="other-app-info"><div class="other-app-name">Frigo Manager</div><div class="other-app-sub">Gérez votre alimentation</div></div>
+        <span class="other-app-arrow">›</span>
+      </a>
+      <a href="https://apps.apple.com/fr/app/id6760929391" target="_blank" class="other-app-row">
+        <span class="other-app-emoji">🎭</span>
+        <div class="other-app-info"><div class="other-app-name">Théatres Paris</div><div class="other-app-sub">Guide des théatres parisiens</div></div>
+        <span class="other-app-arrow">›</span>
+      </a>
+      <a href="https://apps.apple.com/fr/app/id6760617965" target="_blank" class="other-app-row">
+        <span class="other-app-emoji">🍽</span>
+        <div class="other-app-info"><div class="other-app-name">MesRestaurants</div><div class="other-app-sub">Votre carnet de restaurants</div></div>
+        <span class="other-app-arrow">›</span>
+      </a>
+    </div>
+
+    <div class="srow" style="flex-direction:column;align-items:flex-start;gap:4px">
+      <span style="font-size:15px;color:var(--text)">Musées de Paris</span>
+      <span style="font-size:12px;color:var(--text3)">Version 1.1.0</span>
+      <span style="font-size:12px;color:var(--text3)">© 2026 Michel Garlandat</span>
+      <span style="font-size:11px;color:var(--text3);margin-top:2px">Fait avec Claude · Anthropic</span>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ─── IMAGE LOADER ─────────────────────────────────────
+// Each museum has a unique gradient color as fallback
+const GRAD = {
+  1:'linear-gradient(145deg,#2a1f05,#5c3d0a,#8b5e14)',
+  2:'linear-gradient(145deg,#051520,#0a3045,#0f4d6b)',
+  3:'linear-gradient(145deg,#1f0505,#4a0a0a,#7a1515)',
+  4:'linear-gradient(145deg,#081505,#122d0a,#1a4d12)',
+  5:'linear-gradient(145deg,#1a0f05,#3d2008,#6b380d)',
+  6:'linear-gradient(145deg,#0f0520,#200a4a,#35107a)',
+  7:'linear-gradient(145deg,#051510,#0a3020,#0f5535)',
+  8:'linear-gradient(145deg,#1a0510,#400a20,#6b1535)',
+  9:'linear-gradient(145deg,#050f20,#0a2045,#10356b)',
+  10:'linear-gradient(145deg,#1a050f,#3d0a1f,#6b1535)',
+  11:'linear-gradient(145deg,#08051a,#150a3d,#22106b)',
+  12:'linear-gradient(145deg,#050f08,#0a2010,#10351a)'
+};
+
+function makeThumb(cls, mid, src, w, h) {
+  const wrap = document.createElement('div');
+  wrap.className = cls;
+  wrap.style.cssText = 'width:'+w+';height:'+h+'px;background:'+(GRAD[mid]||'#1a1510')+';position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center';
+  const ico = document.createElement('span');
+  ico.style.cssText = 'color:rgba(201,168,112,.25);font-size:'+(h>100?36:24)+'px;position:relative;z-index:1';
+  ico.textContent = '🏛';
+  wrap.appendChild(ico);
+  if (src) {
+    const i = document.createElement('img');
+    i.referrerPolicy = 'no-referrer';
+    i.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .5s';
+    i.onload = function() {
+      this.style.opacity = '1';
+      setTimeout(() => { if (ico.parentNode) ico.parentNode.removeChild(ico); }, 600);
+    };
+    i.onerror = function() { this.style.opacity = '0'; };
+    i.src = src;
+    wrap.appendChild(i);
+  }
+  return wrap;
+}
+
+// ─── DATA ──────────────────────────────────────────────
+const MS = [
+  {id:1,name:{fr:"Musée du Louvre",en:"Louvre Museum"},address:"Rue de Rivoli, 75001 Paris",coords:{lat:48.8606,lng:2.3376},website:"https://www.louvre.fr",hours:{fr:"Lun, Jeu-Dim : 9h-18h · Mer & Ven : 9h-21h45 · Fermé Mar",en:"Mon, Thu-Sun: 9am-6pm · Wed & Fri: 9am-9:45pm · Closed Tue"},price:"22 €",types:{fr:["Antiquités","Peintures","Sculptures","Arts décoratifs"],en:["Antiquities","Paintings","Sculptures","Decorative Arts"]},description:{fr:"Le plus grand musée du monde, avec plus de 35 000 oeuvres exposées sur 72 000 m². Un voyage à travers l'Antiquité, le Moyen Âge et les grandes civilisations.",en:"The world's largest museum, with over 35,000 works across 72,000 m². A journey through Antiquity, the Middle Ages, and great civilizations."},
+    image:"assets/louvre.jpg",
+    artworks:[
+      {name:"La Joconde",artist:"Léonard de Vinci",year:"1503-1519",image:"assets/joconde.jpg"},
+      {name:"Vénus de Milo",artist:"Anonyme",year:"~130 av. J.-C.",image:"assets/venus.jpg"},
+      {name:"La Liberté guidant le peuple",artist:"Eugène Delacroix",year:"1830",image:"assets/liberte.jpg"}
+    ]},
+  {id:2,name:{fr:"Musée d'Orsay",en:"Musée d'Orsay"},address:"1 Rue de la Légion d'Honneur, 75007 Paris",coords:{lat:48.8600,lng:2.3266},website:"https://www.<!--mus-->ee-orsay.fr",hours:{fr:"Mar-Dim : 9h30-18h · Jeu : 9h30-21h45 · Fermé Lun",en:"Tue-Sun: 9:30am-6pm · Thu: 9:30am-9:45pm · Closed Mon"},price:"16 €",types:{fr:["Impressionnisme","Post-impressionnisme","Sculpture"],en:["Impressionism","Post-Impressionism","Sculpture"]},description:{fr:"Installé dans l'ancienne gare d'Orsay, ce musée abrite la plus grande collection impressionniste au monde, avec Monet, Renoir, Van Gogh et Cézanne.",en:"Housed in the former Orsay railway station, this museum holds the world's largest Impressionist collection, featuring Monet, Renoir, Van Gogh and Cézanne."},
+    image:"assets/orsay.jpg",
+    artworks:[
+      {name:"Olympia",artist:"Édouard Manet",year:"1863",image:"assets/olympia.jpg"},
+      {name:"Bal du moulin de la Galette",artist:"Renoir",year:"1876",image:"assets/galette.jpg"},
+      {name:"La Chambre à Arles",artist:"Van Gogh",year:"1888",image:"assets/chambre.jpg"}
+    ]},
+  {id:3,name:{fr:"Centre Pompidou",en:"Centre Pompidou"},address:"Place Georges-Pompidou, 75004 Paris",coords:{lat:48.8607,lng:2.3523},website:"https://www.centrepompidou.fr",hours:{fr:"Mer-Lun : 11h-21h · Fermé Mar",en:"Wed-Mon: 11am-9pm · Closed Tue"},price:"15 €",types:{fr:["Art moderne","Art contemporain","Design"],en:["Modern Art","Contemporary Art","Design"]},description:{fr:"Icône de l'architecture du XXe siècle, le Centre Pompidou accueille le plus grand musée d'art moderne d'Europe avec plus de 100 000 oeuvres.",en:"An icon of 20th-century architecture, Centre Pompidou hosts Europe's largest museum of modern art with over 100,000 works."},
+    image:"assets/pompidou.jpg",
+    artworks:[
+      {name:"Composition II",artist:"Piet Mondrian",year:"1930",image:"assets/mondrian.jpg"},
+      {name:"Fontaine",artist:"Marcel Duchamp",year:"1917",image:"assets/louvre.jpg"},
+      {name:"Autoportrait",artist:"Pablo Picasso",year:"1907",image:"assets/louvre.jpg"}
+    ]},
+  {id:4,name:{fr:"Musée de l'Orangerie",en:"Musée de l'Orangerie"},address:"Jardin des Tuileries, 75001 Paris",coords:{lat:48.8638,lng:2.3222},website:"https://www.musee-orangerie.fr",hours:{fr:"Mer-Lun : 9h-18h · Fermé Mar",en:"Wed-Mon: 9am-6pm · Closed Tue"},price:"12,50 €",types:{fr:["Impressionnisme","École de Paris"],en:["Impressionism","School of Paris"]},description:{fr:"Temple du peintre Monet, l'Orangerie abrite les monumentales Nymphéas dans deux salles ovales conçues spécialement par l'artiste.",en:"A temple to Monet, the Orangerie houses the monumental Water Lilies in two oval rooms designed specifically by the artist."},
+    image:"assets/orangerie.jpg",
+    artworks:[
+      {name:"Les Nymphéas",artist:"Claude Monet",year:"1914-1926",image:"assets/nympheas.jpg"},
+      {name:"Portrait de Femme",artist:"Amedeo Modigliani",year:"1918",image:"assets/modigliani.jpg"},
+      {name:"La Gitane endormie",artist:"Henri Rousseau",year:"1897",image:"assets/rousseau.jpg"}
+    ]},
+  {id:5,name:{fr:"Musée Rodin",en:"Musée Rodin"},address:"77 Rue de Varenne, 75007 Paris",coords:{lat:48.8555,lng:2.3159},website:"https://www.musee-rodin.fr",hours:{fr:"Mar-Dim : 10h-18h30 · Fermé Lun",en:"Tue-Sun: 10am-6:30pm · Closed Mon"},price:"14 €",types:{fr:["Sculpture","Dessin","Photographie"],en:["Sculpture","Drawing","Photography"]},description:{fr:"L'Hôtel Biron accueille les plus grandes sculptures d'Auguste Rodin dans un jardin de 3 hectares.",en:"The Hôtel Biron houses Rodin's greatest sculptures, including The Thinker and The Gates of Hell."},
+    image:"assets/rodin.jpg",
+    artworks:[
+      {name:"Le Penseur",artist:"Auguste Rodin",year:"1880-1882",image:"assets/penseur.jpg"},
+      {name:"Le Baiser",artist:"Auguste Rodin",year:"1882",image:"assets/baiser.jpg"},
+      {name:"Les Bourgeois de Calais",artist:"Auguste Rodin",year:"1889",image:"assets/bourgeois.jpg"}
+    ]},
+  {id:6,name:{fr:"Musée Picasso Paris",en:"Musée Picasso Paris"},address:"5 Rue de Thorigny, 75003 Paris",coords:{lat:48.8594,lng:2.3625},website:"https://www.museepicassoparis.fr",hours:{fr:"Mar-Ven : 10h30-18h · Sam-Dim : 9h30-18h · Fermé Lun",en:"Tue-Fri: 10:30am-6pm · Sat-Sun: 9:30am-6pm · Closed Mon"},price:"14 €",types:{fr:["Cubisme","Surréalisme","Peinture"],en:["Cubism","Surrealism","Painting"]},description:{fr:"L'Hôtel Salé présente la plus importante collection Picasso au monde : 5 000 oeuvres couvrant 80 ans de création.",en:"The Hôtel Salé holds the world's most important Picasso collection: 5,000 works spanning 80 years of creation."},
+    image:"assets/picasso.jpg",
+    artworks:[
+      {name:"Les Demoiselles d'Avignon",artist:"Pablo Picasso",year:"1907",image:"assets/demoiselles.jpg"},
+      {name:"Guernica",artist:"Pablo Picasso",year:"1937",image:"assets/guernica.jpg"},
+      {name:"Portrait de Dora Maar",artist:"Pablo Picasso",year:"1937",image:"assets/dora.jpg"}
+    ]},
+  {id:7,name:{fr:"Musée Marmottan Monet",en:"Marmottan Monet Museum"},address:"2 Rue Louis Boilly, 75016 Paris",coords:{lat:48.8551,lng:2.2779},website:"https://www.marmottan.fr",hours:{fr:"Mar-Dim : 10h-18h · Fermé Lun",en:"Tue-Sun: 10am-6pm · Closed Mon"},price:"14 €",types:{fr:["Impressionnisme","Art de l'Empire"],en:["Impressionism","Empire Art"]},description:{fr:"Ce musée détient la plus grande collection Monet au monde — 94 tableaux — dont Impression Soleil Levant qui donna son nom au mouvement.",en:"This museum holds the world's largest Monet collection — 94 paintings — including Impression Sunrise that gave Impressionism its name."},
+    image:"assets/marmottan.jpg",
+    artworks:[
+      {name:"Impression Soleil Levant",artist:"Claude Monet",year:"1872",image:"assets/sunrise.jpg"},
+      {name:"Le Pont japonais",artist:"Claude Monet",year:"1899",image:"assets/pont_japonais.jpg"},
+      {name:"Nymphéas",artist:"Claude Monet",year:"1906",image:"assets/nympheas.jpg"}
+    ]},
+  {id:8,name:{fr:"Musée Carnavalet",en:"Musée Carnavalet"},address:"23 Rue de Sévigné, 75003 Paris",coords:{lat:48.8573,lng:2.3621},website:"https://www.carnavalet.paris.fr",hours:{fr:"Mar-Dim : 10h-18h · Fermé Lun · Entrée gratuite",en:"Tue-Sun: 10am-6pm · Closed Mon · Free entry"},price:"Gratuit",types:{fr:["Histoire de Paris","Archéologie"],en:["History of Paris","Archaeology"]},description:{fr:"Dédié à l'histoire de Paris de la Préhistoire à nos jours, avec plus de 600 000 objets dans deux hôtels particuliers du Marais.",en:"Dedicated to the history of Paris from Prehistory to today, with over 600,000 objects in two Marais mansions."},
+    image:"assets/carnavalet.jpg",
+    artworks:[
+      {name:"Portrait de Louis XIV",artist:"Hyacinthe Rigaud",year:"1701",image:"assets/louis14.jpg"},
+      {name:"Enseigne de Gersaint",artist:"Jean-Antoine Watteau",year:"1720",image:"assets/gersaint.jpg"},
+      {name:"Vue de Notre-Dame",artist:"Johan B. Jongkind",year:"1864",image:"assets/notredame.jpg"}
+    ]},
+  {id:9,name:{fr:"Musée de Cluny",en:"Cluny Museum"},address:"28 Rue du Sommerard, 75005 Paris",coords:{lat:48.8509,lng:2.3442},website:"https://www.musee-moyenage.fr",hours:{fr:"Mar-Dim : 9h30-18h15 · Fermé Lun",en:"Tue-Sun: 9:30am-6:15pm · Closed Mon"},price:"12 €",types:{fr:["Moyen Âge","Tapisseries","Arts médiévaux"],en:["Middle Ages","Tapestries","Medieval Arts"]},description:{fr:"Seul musée de France entièrement consacré au Moyen Âge, Cluny est célèbre pour La Dame à la Licorne et ses thermes gallo-romains.",en:"France's only museum dedicated to the Middle Ages, famous for The Lady and the Unicorn and its Gallo-Roman baths."},
+    image:"assets/cluny.jpg",
+    artworks:[
+      {name:"La Dame à la Licorne",artist:"Anonyme flamand",year:"~1500",image:"assets/licorne.jpg"},
+      {name:"Tête de roi",artist:"Atelier gothique",year:"XIIIe s.",image:"assets/rois.jpg"},
+      {name:"Pilier des Nautes",artist:"Anonyme gallo-romain",year:"Ier s.",image:"assets/pilier.jpg"}
+    ]},
+  {id:10,name:{fr:"Musée Guimet",en:"Guimet Museum"},address:"6 Place d'Iéna, 75116 Paris",coords:{lat:48.8652,lng:2.2931},website:"https://www.guimet.fr",hours:{fr:"Mer-Lun : 10h-18h · Fermé Mar",en:"Wed-Mon: 10am-6pm · Closed Tue"},price:"13 €",types:{fr:["Arts asiatiques","Art bouddhiste","Art hindou"],en:["Asian Arts","Buddhist Art","Hindu Art"]},description:{fr:"Premier musée d'arts asiatiques d'Europe, le Guimet rassemble 45 000 oeuvres d'Afghanistan, d'Inde, de Chine, du Japon et d'Asie du Sud-Est.",en:"Europe's leading Asian arts museum, Guimet brings together 45,000 works from Afghanistan, India, China, Japan and Southeast Asia."},
+    image:"assets/guimet.jpg",
+    artworks:[
+      {name:"Shiva Nataraja",artist:"Anonyme indien",year:"Xe-XIe s.",image:"assets/shiva.jpg"},
+      {name:"Tête de Bodhisattva",artist:"Art du Gandhara",year:"IIe-IIIe s.",image:"assets/gandhara.jpg"},
+      {name:"Paravent japonais",artist:"Ogata Korin",year:"XVIIe s.",image:"assets/korin.jpg"}
+    ]},
+  {id:11,name:{fr:"Musée des Arts Décoratifs",en:"Museum of Decorative Arts"},address:"107 Rue de Rivoli, 75001 Paris",coords:{lat:48.8641,lng:2.3347},website:"https://madparis.fr",hours:{fr:"Mar-Dim : 11h-18h · Fermé Lun",en:"Tue-Sun: 11am-6pm · Closed Mon"},price:"14 €",types:{fr:["Design","Mode & Textile","Arts décoratifs"],en:["Design","Fashion & Textile","Decorative Arts"]},description:{fr:"Le MAD Paris retrace l'histoire des arts de vivre depuis le Moyen Âge avec mobilier, bijoux, céramiques, et une collection mode de 150 000 pièces.",en:"MAD Paris traces the history of the art of living from the Middle Ages, with furniture, jewellery, ceramics, and a fashion collection of 150,000 pieces."},
+    image:"assets/artsDeco.jpg",
+    artworks:[
+      {name:"Cabinet Boulle",artist:"André-Charles Boulle",year:"~1700",image:"assets/boulle.jpg"},
+      {name:"Vase Art Nouveau",artist:"Émile Gallé",year:"1900",image:"assets/galle.jpg"},
+      {name:"Robe du soir",artist:"Cristóbal Balenciaga",year:"1967",image:"assets/balenciaga.jpg"}
+    ]},
+  {id:12,name:{fr:"Musée de l'Armée",en:"Army Museum"},address:"129 Rue de Grenelle, 75007 Paris",coords:{lat:48.8548,lng:2.3124},website:"https://www.musee-armee.fr",hours:{fr:"Lun-Dim : 10h-18h",en:"Mon-Sun: 10am-6pm"},price:"15 €",types:{fr:["Histoire militaire","Armes & Armures","Napoléon"],en:["Military History","Arms & Armour","Napoleon"]},description:{fr:"L'un des plus riches musées militaires du monde, abritant le tombeau de Napoléon sous le dôme des Invalides.",en:"One of the world's richest military museums, housing Napoleon's tomb under the Invalides dome."},
+    image:"assets/armee.jpg",
+    artworks:[
+      {name:"Portrait de Napoléon",artist:"Jean-Auguste Ingres",year:"1806",image:"assets/napoleon.jpg"},
+      {name:"Armure de Henri II",artist:"Armurier royal",year:"1555",image:"assets/armure.jpg"},
+      {name:"Épée de parade",artist:"Atelier carolingien",year:"IXe s.",image:"assets/epee.jpg"}
+    ]},
+    {
+        id: 13,
+        name: { fr: "Petit Palais", en: "" },
+        address: "Avenue Winston-Churchill, 75008 Paris",
+        coords: { lat: 48.8662, lng: 2.3133 },
+        website: "https://www.petitpalais.paris.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Art"], en: [] },
+        description: { fr: "Le Petit Palais, construit à l'occasion de l'Exposition universelle de 1900 par l'architecte Charles Girault, abrite le musée des Beaux-Arts de la ville de Paris. Il est situé à Paris 8e, avenue Winston-Churchill, face au Grand Palais et bordé par la Seine et l'avenue des Champs-Élysées. Il est érigé en partie à la place du palais de l'Industrie, démoli en 1896. Le bâtiment est inscrit aux monuments historiques en 1975.", en: "" },
+        image: "assets/petitPalais.jpg",
+        artworks: []
+    },
+    {
+        id: 14,
+        name: { fr: "Grand Palais", en: "" },
+        address: "Avenue Winston-Churchill 75008 Paris",
+        coords: { lat: 48.8661, lng: 2.3125 },
+        website: "https://www.grandpalais.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Art"], en: [] },
+        description: { fr: "Le grand palais des Beaux-Arts, souvent appelé simplement Grand Palais, est un monument parisien situé en bordure des Champs-Élysées, face au Petit Palais, dont il est séparé par l'avenue Winston-Churchill, dans le 8e arrondissement. Ses 77 000 m2 abritent régulièrement salons et expositions.", en: "" },
+        image: "assets/grandPalais.jpg",
+        artworks: []
+    },
+    {
+        id: 15,
+        name: { fr: "Musée Georges Pompidou", en: "" },
+        address: "Place Georges Pompidou, 75004 Paris",
+        coords: { lat: 48.8607, lng: 2.3523 },
+        website: "https://www.centrepompidou.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Art Moderne"], en: [] },
+        description: { fr: "Le musée national d'Art moderne (MNAM) est un musée français consacré à l’art moderne et contemporain des xxe et xxie siècles. Il est situé à Paris dans le centre Georges-Pompidou, où il occupe deux niveaux (« Art contemporain » au niveau 4 et « Art moderne » au niveau 5), outre l'atelier Brancusi, des galeries d'expositions temporaires et divers autres espaces liés au musée. La collection est la deuxième plus grande du monde après celle du musée d'Art moderne de New York et rassemble plus de cent dix mille œuvres dont seule une partie est exposée par roulement. L’accrochage est en principe révisé tous les deux ans[2]. Des expositions temporaires sont également présentées.", en: "" },
+        image: "assets/artModerne.jpg",
+        artworks: []
+    },
+    {
+        id: 16,
+        name: { fr: "Musée Cognac-Jay", en: "" },
+        address: "8, rue Elzévir, 75003 Paris",
+        coords: { lat: 48.8579, lng: 2.3601 },
+        website: "https://www.museecognacqjay.paris.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Art"], en: [] },
+        description: { fr: "Le musée Cognacq-Jay est un musée municipal de la Ville de Paris présentant une collection d'œuvres et d'objets d'art du xviiie siècle issue du legs d'Ernest Cognacq", en: "" },
+        image: "assets/cognacJay.jpg",
+        artworks: []
+    },
+    {
+        id: 17,
+        name: { fr: "Musée du quai Branly - Jacques Chirac", en: "" },
+        address: "",
+        coords: { lat: 48.8601, lng: 2.2976 },
+        website: "https://www.quaibranly.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Art Africain","Art Asiatique","Art Oceaniens"], en: [] },
+        description: { fr: "Le musée du Quai Branly - Jacques-Chirac, plus communément appelé musée du Quai Branly, anciennement musée des Arts et Civilisations d'Afrique, d'Asie, d'Océanie et des Amériques avant 2016, est un musée ethnographique situé dans le 7e arrondissement de Paris, le long du quai de la Seine qui lui donne son nom et au pied de la tour Eiffel, sur le quai Jacques-Chirac. Le projet, porté par Jacques Chirac et réalisé par Jean Nouvel, est inauguré le 20 juin 2006. La fréquentation se situe à près de 1 500 000 visiteurs en 2009 et franchit en 2022 le cap des 20 millions depuis son ouverture, ce qui le place parmi les plus fréquentés au monde dans sa catégorie.", en: "" },
+        image: "assets/branly.jpg",
+        artworks: []
+    },
+    {
+        id: 18,
+        name: { fr: "Musée Zadkine", en: "" },
+        address: "100 bis rue d'Assas 75005 Paris",
+        coords: { lat: 48.8446, lng: 2.3344 },
+        website: "https://www.zadkine.paris.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Scupture"], en: [] },
+        description: { fr: "Le musée Zadkine est un musée parisien consacré au sculpteur d'origine russe Ossip Zadkine (1890-1967) qui s'est établi à Paris en 1910. Il est situé no 100 bis, rue d'Assas, dans le 6e arrondissement de Paris. Il existe également un musée départemental dans le village des Arques dans le Lot, où vécut Ossip Zadkine.", en: "" },
+        image: "assets/zadkine.jpg",
+        artworks: []
+    },
+    {
+        id: 19,
+        name: { fr: "Musée National Picasso", en: "" },
+        address: "5 rue de Thorigny, 75003 Paris",
+        coords: { lat: 48.8594, lng: 2.3625 },
+        website: "https://www.museepicassoparis.fr/",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Peinture","Scupture","Dessins","gravures","ceramiques"], en: [] },
+        description: { fr: "Le musée Picasso est le musée national français consacré à la vie et à l'œuvre de Pablo Picasso ainsi qu'aux artistes qui lui furent liés", en: "" },
+        image: "assets/picasso.jpg",
+        artworks: []
+    },
+    {
+        id: 20,
+        name: { fr: "Cité des sciences et de l'industrie", en: "" },
+        address: "30, avenue Corentin-Cariou, 75019 Paris",
+        coords: { lat: 48.8976, lng: 2.3878 },
+        website: "https://www.cite-sciences.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Sciences","techniques"], en: [] },
+        description: { fr: "La Cité des sciences et de l'industrie (CSI) est un établissement français spécialisé dans la diffusion de la culture scientifique et technique.", en: "" },
+        image: "assets/industrie.jpg",
+        artworks: []
+    },
+    {
+        id: 21,
+        name: { fr: "Musée des Arts et Métiers", en: "" },
+        address: "60 rue de reaumur, 75003 Paris",
+        coords: { lat: 48.8658, lng: 2.3552 },
+        website: "https://www.arts-et-metiers.net",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Sciences","techniques"], en: [] },
+        description: { fr: "Le musée des Arts et Métiers est un musée des sciences et des technologies, du Conservatoire national des arts et métiers", en: "" },
+        image: "assets/artsMetiers.jpg",
+        artworks: []
+    },
+    {
+        id: 22,
+        name: { fr: "Musée National d'Histoire naturelle", en: "" },
+        address: "57 rue Cuvier, 75005 paris",
+        coords: { lat: 48.8440, lng: 2.3579 },
+        website: "https://www.mnhn.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: [], en: [] },
+        description: { fr: "Le Muséum national d'histoire naturelle est un établissement français d'enseignement supérieur, de recherche et de diffusion de la culture scientifique naturaliste (sciences de la vie, sciences de la Terre, anthropologie et disciplines dérivées), membre de l'alliance Sorbonne Université.", en: "" },
+        image: "assets/histoireNaturelle.jpg",
+        artworks: []
+    },
+    {
+        id: 23,
+        name: { fr: "Musée de Cluny", en: "" },
+        address: "6 place Paul-Painlevé, 75005 Paris",
+        coords: { lat: 48.8509, lng: 2.3442 },
+        website: "https://www.musee-moyenage.fr/",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["meubles","Art du moyen age"], en: [] },
+        description: { fr: "Le musée de Cluny, de son nom officiel musée national du Moyen Âge - thermes et hôtel de Cluny[3], est situé dans le 5e arrondissement de Paris, au cœur du Quartier latin, dans un hôtel particulier du xve siècle", en: "" },
+        image: "assets/cluny.jpg",
+        artworks: []
+    },
+    {
+        id: 24,
+        name: { fr: "Musée Jacquemart André", en: "" },
+        address: "158 Boulevard Haussmann, 75008 Paris",
+        coords: { lat: 48.8762, lng: 2.3101 },
+        website: "https://www.musee-jacquemart-andre.com",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: [], en: [] },
+        description: { fr: "Le musée Jacquemart-André est un musée de beaux-arts et d'arts décoratifs", en: "" },
+        image: "assets/jacquemart.jpg",
+        artworks: []
+    },
+    {
+        id: 25,
+        name: { fr: "Institut du Monde Arabe", en: "" },
+        address: "1, rue des Fossés-Saint-Bernard, 75015 Paris",
+        coords: { lat: 48.8519, lng: 2.3543 },
+        website: "https://www.imarabe.org",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Archeologie","Ethnographie"], en: [] },
+        description: { fr: "est un institut culturel français consacré au monde arabe. Il est situé au cœur de Paris, dans le 5e arrondissement.", en: "" },
+        image: "assets/mondeArabe.jpg",
+        artworks: []
+    },
+    {
+        id: 26,
+        name: { fr: "Palais de la Découverte", en: "" },
+        address: "Avenue Franklin-D.-Roosevel, 75008 Parist",
+        coords: { lat: 48.8660, lng: 2.3126 },
+        website: "https://www.palais-decouverte.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: [], en: [] },
+        description: { fr: "Le Palais de la découverte est un musée scientifique parisien installé depuis 1937 dans l'aile ouest du Grand Palais, dans le 8e arrondissement et ayant pour missions de présenter, au moyen de démonstrations pédagogiques et d'expositions, les sciences astronomiques, biologiques, chimiques, géologiques, médicales, mathématiques et physiques, afin de susciter des vocations.", en: "" },
+        image: "assets/decouverte.jpg",
+        artworks: []
+    },
+    {
+        id: 27,
+        name: { fr: "Musée Grévin", en: "" },
+        address: "10, boulevard Montmartre, 75009 Paris",
+        coords: { lat: 48.8717, lng: 2.3468 },
+        website: "https://www.grevin-paris.com",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: [], en: [] },
+        description: { fr: "Le musée Grévin est un musée de cire privé, créé par Arthur Meyer le 5 juin 1882, propriété de Grévin & Cie (une filiale de la Compagnie des Alpes depuis sa privatisation), situé dans le 9e arrondissement de Paris, et dans lequel sont regroupées des reproductions en cire de personnages célèbres.", en: "" },
+        image: "assets/grevin.jpg",
+        artworks: []
+    },
+    {
+        id: 28,
+        name: { fr: "Musée d'Art Moderne - Palais de Tokyo", en: "" },
+        address: "",
+        coords: { lat: 48.8639, lng: 2.2973 },
+        website: "https://www.palaisdetokyo.com",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Art Moderne"], en: [] },
+        description: { fr: "Le palais de Tokyo, dont le nom originel est palais des Musées d'art moderne, désigne un bâtiment consacré à l'art moderne et contemporain. Il est situé au 13, avenue du Président-Wilson dans le 16e arrondissement de Paris, en suivant les quais de Seine à quelques centaines de mètres au nord-est du palais de Chaillot, dans un style architectural qui lui est proche. L'enveloppe externe du bâtiment est totalement revêtue de marbre.", en: "" },
+        image: "assets/artModerne.jpg",
+        artworks: []
+    },
+    {
+        id: 29,
+        name: { fr: "Musée Maillol", en: "" },
+        address: "61, rue de Grenelle 75007 Paris",
+        coords: { lat: 48.8556, lng: 2.3196 },
+        website: "https://museemaillol.com",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["peinture","sculture","dessin"], en: [] },
+        description: { fr: "Le musée Maillol est un musée privé situé au 61 de la rue de Grenelle dans le 7e arrondissement de Paris. Créé le 20 janvier 1995 par Dina Vierny, la muse du sculpteur Aristide Maillol, il présente de nombreuses œuvres de Maillol, ainsi qu'une collection d'art moderne du xxe siècle en peinture, sculpture et dessin. Les expositions temporaires sont consacrées à l'art des xxe siècle et xxie siècle.", en: "" },
+        image: "assets/maillol.jpg",
+        artworks: []
+    },
+    {
+        id: 30,
+        name: { fr: "Conciergerie", en: "" },
+        address: "2 boulevard du Palais, 75001 Paris",
+        coords: { lat: 48.8556, lng: 2.3468 },
+        website: "https://www.paris-conciergerie.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: [], en: [] },
+        description: { fr: "La Conciergerie est un ancien palais de justice et prison de Paris, en France, situé à l'ouest de l'île de la Cité, sous le Palais de Justice. Elle faisait à l'origine partie de l'ancien palais royal, le palais de la Cité, qui comprenait également la Sainte-Chapelle. Deux grandes salles médiévales subsistent du palais royal. Pendant la Révolution française, 2 780 prisonniers dont Marie-Antoinette sont incarcérés, jugés et condamnés à la Conciergerie, puis envoyés sur différents sites pour être exécutés par la guillotine. C'est maintenant un monument du centre des monuments nationaux.", en: "" },
+        image: "assets/conciergerie.jpg",
+        artworks: []
+    },
+    {
+        id: 31,
+        name: { fr: "Musée Marmottan - Monet", en: "" },
+        address: "2, rue Louis-Boilly 75016 Paris",
+        coords: { lat: 48.8551, lng: 2.2779 },
+        website: "https://www.marmottan.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Impressionnistes"], en: [] },
+        description: { fr: "Le musée Marmottan, devenu musée Marmottan Monet dans les années 1990, est un musée des beaux-arts situé à Paris. Il présente notamment une collection d’objets d’art et de tableaux du Premier Empire, ainsi que des œuvres de peintres impressionnistes dont la plus grande collection au monde d'œuvres de Claude Monet.", en: "" },
+        image: "assets/marmottan.jpg",
+        artworks: []
+    },
+    {
+        id: 32,
+        name: { fr: "Musée du Jeu de Paune", en: "" },
+        address: "1, place de la Concorde, jardin des Tuileries, 75001 Paris",
+        coords: { lat: 48.8638, lng: 2.3222 },
+        website: "https://www.jeudepaume.org",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["photographie", "cinema", "video", "arts numerique"], en: [] },
+        description: { fr: "e Jeu de paume est un centre d'art consacré aux images du xixe siècle à nos jours, sous toutes leurs formes (photographie, cinéma, arts numériques, installations) d'une superficie de 1 200 m2, situé à l'angle nord-ouest du jardin des Tuileries, place de la Concorde, à Paris.", en: "" },
+        image: "assets/paume.jpg",
+        artworks: []
+    },
+    {
+        id: 33,
+        name: { fr: "Collection Pinault", en: "" },
+        address: "2 rue de Viarmes, 75001 Paris",
+        coords: { lat: 48.8625, lng: 2.3444 },
+        website: "https://www.pinaultcollection.com",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Art moderne","Art Contemporain"], en: [] },
+        description: { fr: "La collection Pinault est la collection d'œuvres appartenant à l’homme d'affaires François Pinault et sa famille, en propre ou via des sociétés commerciales. La collection Pinault comporte plusieurs milliers d'œuvres, essentiellement représentatives de l'art moderne et de l'art contemporain, sous forme de tableaux mais aussi de photos ou d'installations visuelles ou sonores.", en: "" },
+        image: "assets/pinault.jpg",
+        artworks: []
+    },
+    {
+        id: 34,
+        name: { fr: "Cité de la musique - Philharmonie de paris", en: "" },
+        address: "185, boulevard Sérurier, 75019 Paris",
+        coords: { lat: 48.8938, lng: 2.3944 },
+        website: "https://www.philharmoniedeparis.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: [], en: [] },
+        description: { fr: "La Cité de la musique est à la fois un établissement public parisien et un ensemble de bâtiments conçu par l’architecte Christian de Portzamparc et inauguré le 12 janvier 1995. Située sur le parc de la Villette, elle propose une programmation allant de la musique ancienne à la musique contemporaine, au jazz, aux musiques du monde et aux musiques actuelles. Cette programmation est structurée autour de thématiques.", en: "" },
+        image: "assets/musique.jpg",
+        artworks: []
+    },
+    {
+        id: 35,
+        name: { fr: "Musée de l'immigration", en: "" },
+        address: "293, avenue Daumesnil 75012 Paris",
+        coords: { lat: 48.8359, lng: 2.4063 },
+        website: "https://www.histoire-immigration.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: [], en: [] },
+        description: { fr: "Le musée de l’Histoire de l’immigration est un musée national français situé dans le palais de la Porte-Dorée dans le 12e arrondissement, à l'est de Paris. Il est ouvert au public depuis octobre 2007 et a été officiellement inauguré le 15 décembre 2014 par le président François Hollande, sept ans après son ouverture[1]. Il est administré par l'« établissement public du palais de la Porte-Dorée » depuis janvier 2012[2]. Sa dénomination officielle est « Musée national de l'histoire et des cultures de l'immigration", en: "" },
+        image: "assets/immigration.jpg",
+        artworks: []
+    },
+    {
+        id: 36,
+        name: { fr: "Fondation Louis Vuitton", en: "" },
+        address: "8 avenue du Mahatma-Gandhi, 75016 Paris",
+        coords: { lat: 48.8759, lng: 2.2580 },
+        website: "https://www.fondationlouisvuitton.fr",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Art Contemporain"], en: [] },
+        description: { fr: "La fondation d'entreprise Louis-Vuitton, anciennement fondation d'entreprise Louis-Vuitton pour la création[2] lancée en octobre 2005, est une fondation d'entreprise créée par le groupe LVMH et ses maisons. Elle a pour objectif de pérenniser les actions de mécénat engagées depuis 1990 par le groupe.", en: "" },
+        image: "assets/vuitton.jpg",
+        artworks: []
+    },
+    {
+        id: 37,
+        name: { fr: "Fondation Cartier", en: "" },
+        address: "2, place du Palais-Royal 75001 Paris",
+        coords: { lat: 48.8383, lng: 2.3317 },
+        website: "https://www.fondationcartier.com",
+        hours: { fr: "", en: "" },
+        price: "",
+        types: { fr: ["Art Contemporain"], en: [] },
+        description: { fr: "La Fondation Cartier pour l’art contemporain a été créée en 1984 par la Maison Cartier et son président Alain Dominique Perrin. C'est une institution privée entièrement consacrée à l’art contemporain.", en: "" },
+        image: "assets/cartier.jpg",
+        artworks: []
+    },
+];
+
+// ─── STATE ─────────────────────────────────────────────
+const S={lang:localStorage.getItem('mp_lang')||'fr',theme:localStorage.getItem('mp_theme')||'dark',favs:JSON.parse(localStorage.getItem('mp_favs')||'[]'),view:'list',prev:'list',filter:'all',query:'',mapDone:false,detail:null};
+const sv=()=>{localStorage.setItem('mp_lang',S.lang);localStorage.setItem('mp_theme',S.theme);localStorage.setItem('mp_favs',JSON.stringify(S.favs))};
+const t=k=>({fr:{title:"Musées de Paris",list:"Liste",map:"Carte",fav:"Favoris",settings:"Paramètres",search:"Rechercher un musée…",all:"Tous",noFav:"Aucun favori pour l'instant.\nAjoutez des musées depuis la liste.",noResult:"Aucun musée trouvé",back:"Retour",itinerary:"Itinéraire",website:"Site web",hours:"Horaires",price:"Tarif",address:"Adresse",highlights:"Œuvres phares",museums:"musées",added:"Ajouté aux favoris",removed:"Retiré des favoris",dark:"Mode sombre",notif:"Notifications"},en:{title:"Paris Museums",list:"List",map:"Map",fav:"Favorites",settings:"Settings",search:"Search a museum…",all:"All",noFav:"No favorites yet.\nAdd museums from the list.",noResult:"No museums found",back:"Back",itinerary:"Get Directions",website:"Website",hours:"Hours",price:"Admission",address:"Address",highlights:"Highlights",museums:"museums",added:"Added to favorites",removed:"Removed from favorites",dark:"Dark mode",notif:"Notifications"}})[S.lang][k]||k;
+const isFav=id=>S.favs.includes(id);
+
+document.addEventListener('DOMContentLoaded',()=>{
+  applyTheme();applyLang();renderList();bindNav();bindHdr();bindSettings();
+  document.getElementById('sinput').addEventListener('input',e=>{S.query=e.target.value;renderList()});
+  buildChips();updateDot();
+});
+
+function applyTheme(){document.body.classList.toggle('light',S.theme==='light');document.getElementById('tdark').checked=S.theme==='dark'}
+
+function applyLang(){['htitle','nl0','nl1','nl2','sttl','sdark','snotif'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.textContent=[t('title'),t('list'),t('map'),t('fav'),t('settings'),t('dark'),t('notif')][i]});document.getElementById('blang').textContent=S.lang.toUpperCase();const si=document.getElementById('sinput');if(si)si.placeholder=t('search')}
+
+function goTo(vid,museum){
+  if(vid==='detail'){S.detail=museum;S.prev=S.view}
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
+  document.getElementById('v'+vid).classList.add('on');
+  const nb=document.querySelector('.nb[data-v="'+vid+'"]');if(nb)nb.classList.add('on');
+  S.view=vid;
+  if(vid==='map')initMap();
+  if(vid==='favorites')renderFavs();
+  if(vid==='detail')renderDetail(museum);
+  if(vid==='list')renderList();
+}
+    
+function bindNav(){document.querySelectorAll('.nb').forEach(b=>b.addEventListener('click',()=>goTo(b.dataset.v)))}
+
+function bindHdr(){
+  document.getElementById('blang').addEventListener('click',()=>{S.lang=S.lang==='fr'?'en':'fr';sv();applyLang();buildChips();if(S.view==='list')renderList();else if(S.view==='favorites')renderFavs();else if(S.view==='detail'&&S.detail)renderDetail(S.detail);});
+}
+
+function buildChips(){
+  const types=[...new Set(MS.flatMap(m=>m.types[S.lang]))].sort();
+  const el=document.getElementById('chips');
+  el.innerHTML=[t('all'),...types].map(tp=>{const v=tp===t('all')?'all':tp;return'<button class="chip'+(S.filter===v?' on':'')+'" data-tp="'+v+'">'+tp+'</button>'}).join('');
+  el.querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{S.filter=c.dataset.tp;buildChips();renderList()}));
+}
+    
+const norm=s=>s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function filtered(){
+  return MS.filter(m=>{
+    const ok=S.filter==='all'||m.types[S.lang].includes(S.filter);
+    const q=norm(S.query);
+    return ok&&(!q||norm(m.name[S.lang]).includes(q)||norm(m.address).includes(q)||m.types[S.lang].some(tp=>norm(tp).includes(q)));
+  });
+}
+
+function cardEl(m){
+  const div=document.createElement('div');
+  div.className='mc';div.dataset.id=m.id;
+  const thumb=makeThumb('mthumb',m.id,m.image,'100%',160);
+  const f=isFav(m.id);
+  const tgs=m.types[S.lang].slice(0,3).map(tp=>'<span class="tag">'+tp+'</span>').join('');
+  const body=document.createElement('div');body.className='mcb';
+  body.innerHTML='<div class="mct"><div class="mcn">'+m.name[S.lang]+'</div><button class="fbtn'+(f?' on':'')+'" data-id="'+m.id+'">'+(f?'♥':'♡')+'</button></div>'
+    +'<div class="mcaddr"><svg width="11" height="11" viewBox="0 0 11 11" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="5.5" cy="4.5" r="1.8"/><path d="M5.5 11C5.5 11 1 6.8 1 4.5a4.5 4.5 0 0 1 9 0C10 6.8 5.5 11 5.5 11z"/></svg>'+m.address+'</div>'
+    +'<div class="mctags">'+tgs+'</div>';
+  div.appendChild(thumb);div.appendChild(body);
+  div.addEventListener('click',e=>{if(e.target.closest('.fbtn'))return;goTo('detail',m)});
+  div.querySelector('.fbtn').addEventListener('click',e=>{e.stopPropagation();toggleFav(m.id,div)});
+  return div;
+}
+
+function toggleFav(id,cardEl){
+  if(isFav(id)){S.favs=S.favs.filter(f=>f!==id);toast(t('removed'))}else{S.favs.push(id);toast(t('added'))}
+  sv();updateDot();
+  // Update all fav buttons
+  document.querySelectorAll('.fbtn[data-id="'+id+'"]').forEach(b=>{b.classList.toggle('on',isFav(id));b.textContent=isFav(id)?'♥':'♡'});
+  const df=document.getElementById('dfav');if(df&&+df.dataset.id===id){df.classList.toggle('on',isFav(id));df.textContent=isFav(id)?'♥':'♡'}
+  if(S.view==='favorites')renderFavs();
+}
+function updateDot(){document.getElementById('ndot').classList.toggle('on',S.favs.length>0)}
+
+function renderList(){
+  const list=filtered(),el=document.getElementById('mlist');
+  el.innerHTML='';
+  if(!list.length){el.innerHTML='<div class="empty"><div class="eico">🏛</div><div class="etxt">'+t('noResult')+'</div></div>';return}
+  const cnt=document.createElement('div');cnt.className='cnt';cnt.textContent=list.length+' '+t('museums');el.appendChild(cnt);
+  list.forEach(m=>el.appendChild(cardEl(m)));
+}
+
+function renderFavs(){
+  const favs=MS.filter(m=>isFav(m.id)),el=document.getElementById('flist');
+  el.innerHTML='';
+  if(!favs.length){el.innerHTML='<div class="empty"><div class="eico">♡</div><div class="etxt">'+t('noFav')+'</div></div>';return}
+  favs.forEach(m=>el.appendChild(cardEl(m)));
+}
+
+function initMap(){
+  if(S.mapDone)return;S.mapDone=true;
+  setTimeout(()=>{
+    const map=L.map('map',{center:[48.858,2.345],zoom:13});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:19}).addTo(map);
+    const ico=L.divIcon({className:'',html:'<div style="width:26px;height:26px;background:#c9a870;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #161310;box-shadow:0 2px 8px rgba(0,0,0,.5)"></div>',iconSize:[26,26],iconAnchor:[13,26],popupAnchor:[0,-28]});
+    MS.forEach(m=>{
+      L.marker([m.coords.lat,m.coords.lng],{icon:ico}).addTo(map)
+        .bindPopup('<div class="pname">'+m.name[S.lang]+'</div><div class="ptype">'+m.types[S.lang][0]+'</div><button class="pbtn" onclick="goTo(\'detail\',MS.find(x=>x.id==='+m.id+'))">Voir →</button>',{maxWidth:200});
+    });
+  },80);
+}
+
+function renderDetail(m){
+  const f=isFav(m.id);
+  const tgs=m.types[S.lang].map(tp=>'<span class="tag">'+tp+'</span>').join('');
+  const mapsUrl='https://maps.apple.com/?daddr='+m.coords.lat+','+m.coords.lng+'&dirflg=d';
+  const el=document.getElementById('dinn');
+  el.innerHTML='';
+
+  // Back button
+  const back=document.createElement('div');back.className='dback';
+  back.innerHTML='<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="13,4 7,10 13,16"/></svg><span class="dbacklbl">'+t('back')+'</span>';
+  back.onclick=()=>goTo(S.prev);
+  el.appendChild(back);
+
+  // Hero image
+  const heroWrap=makeThumb('dhero-wrap',m.id,m.image,'100%',240);
+  el.appendChild(heroWrap);
+
+  // Body
+  const body=document.createElement('div');body.className='dbody';
+  body.innerHTML=
+    '<div class="dr1"><div class="dname">'+m.name[S.lang]+'</div><button class="dfav'+(f?' on':'')+'" id="dfav" data-id="'+m.id+'">'+(f?'♥':'♡')+'</button></div>'
+    +'<div class="dtags">'+tgs+'</div>'
+    +'<p class="ddesc">'+m.description[S.lang]+'</p>'
+    +'<div class="dacts">'
+      +'<button class="abtn agold" id="dnav"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><polygon points="7,1 1,13 7,10.5 13,13"/></svg>'+t('itinerary')+'</button>'
+      +'<button class="abtn aplain" id="dweb"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="7" cy="7" r="6"/><path d="M1 7h12M7 1c-2.5 2-3 4-3 6s.5 4 3 6M7 1c2.5 2 3 4 3 6s-.5 4-3 6"/></svg>'+t('website')+'</button>'
+    +'</div>'
+    +'<div class="iblock">'
+      +'<div class="irow"><span class="iico">📍</span><div><div class="ilbl">'+t('address')+'</div><div class="ival">'+m.address+'</div><div class="igps">'+m.coords.lat.toFixed(4)+'° N · '+m.coords.lng.toFixed(4)+'° E</div></div></div>'
+      +'<div class="irow"><span class="iico">🕐</span><div><div class="ilbl">'+t('hours')+'</div><div class="ival">'+m.hours[S.lang]+'</div></div></div>'
+      +'<div class="irow"><span class="iico">🎫</span><div><div class="ilbl">'+t('price')+'</div><div class="ival">'+m.price+'</div></div></div>'
+    +'</div>'
+    +'<div class="atttl">'+t('highlights')+'</div>';
+
+  // Artworks scroll
+  const scroll=document.createElement('div');scroll.className='ascroll';
+  m.artworks.forEach(a=>{
+    const ac=document.createElement('div');ac.className='ac';
+    const thumb=makeThumb('acthumb',m.id,a.image,'138px',138);
+    ac.appendChild(thumb);
+    ac.innerHTML+='<div class="acinfo"><div class="acname">'+a.name+'</div><div class="acar">'+a.artist+'</div><div class="acyr">'+a.year+'</div></div>';
+    scroll.appendChild(ac);
+  });
+  body.appendChild(scroll);
+  el.appendChild(body);
+
+  document.getElementById('dfav').onclick=()=>toggleFav(m.id);
+  document.getElementById('dnav').onclick=()=>window.open(mapsUrl,'_blank');
+  document.getElementById('dweb').onclick=()=>window.open(m.website,'_blank');
+  document.getElementById('vdetail').scrollTop=0;
+}
+
+function bindSettings(){
+  const ov=document.getElementById('sov');
+  document.getElementById('bset').onclick=()=>ov.classList.add('on');
+  document.getElementById('sclose').onclick=()=>ov.classList.remove('on');
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.classList.remove('on')});
+  document.getElementById('tdark').addEventListener('change',e=>{S.theme=e.target.checked?'dark':'light';sv();applyTheme()});
+}
+
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('on');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('on'),2000)}
+</script>
+<script src="capacitor.js" onerror="void(0)"></script>
+</body>
+</html>
